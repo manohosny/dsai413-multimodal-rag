@@ -84,9 +84,14 @@ class GeminiEmbedder:
             batch_texts = [t for _, _, t in batch]
             batch_ids = [rid for _, rid, _ in batch]
 
+            # Each text must be a separate Content object for true batch embedding.
+            # Passing a list of strings produces a single concatenated embedding.
+            contents = [
+                types.Content(parts=[types.Part(text=t)]) for t in batch_texts
+            ]
             response = self._client.models.embed_content(
                 model=EMBEDDING_MODEL,
-                contents=batch_texts,
+                contents=contents,
                 config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
             )
 
@@ -140,12 +145,15 @@ class GeminiEmbedder:
         for batch_start in range(0, len(to_embed), EMBEDDING_IMAGE_BATCH):
             batch = to_embed[batch_start : batch_start + EMBEDDING_IMAGE_BATCH]
 
+            # Each image must be a separate Content object for true batch embedding.
             contents = []
             batch_ids = []
             for path, rid in batch:
                 img_bytes = path.read_bytes()
                 contents.append(
-                    types.Part.from_bytes(data=img_bytes, mime_type="image/png")
+                    types.Content(
+                        parts=[types.Part.from_bytes(data=img_bytes, mime_type="image/png")]
+                    )
                 )
                 batch_ids.append(rid)
 

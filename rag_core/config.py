@@ -7,14 +7,19 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load .env from project root
+# Load .env from project root (override=True so .env wins over shell env)
 _PROJECT_ROOT = Path(__file__).resolve().parent.parent
-load_dotenv(_PROJECT_ROOT / ".env")
+load_dotenv(_PROJECT_ROOT / ".env", override=True)
 
 # --- API keys (fail fast) ---------------------------------------------------
 
 GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
 PINECONE_API_KEY: str = os.environ.get("PINECONE_API_KEY", "")
+
+# Ensure GOOGLE_API_KEY matches GEMINI_API_KEY so the google-genai SDK
+# doesn't pick up a stale key from the shell environment.
+if GEMINI_API_KEY:
+    os.environ["GOOGLE_API_KEY"] = GEMINI_API_KEY
 
 
 def require_keys() -> None:
