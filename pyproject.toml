@@ -1,0 +1,28 @@
+[project]
+name = "dsai413-multimodal-rag"
+version = "0.1.0"
+description = "Multi-modal RAG over financial documents using Gemini Embedding 2 + Pinecone"
+requires-python = ">=3.11"
+dependencies = [
+  "google-genai>=1.0",
+  "pinecone>=5.0",
+  "datasets>=3.0",
+  "pillow>=10",
+  "streamlit>=1.38",
+  "python-dotenv>=1.0",
+  "pytrec-eval-terrier>=0.5",
+  "numpy>=1.24",
+]
+
+[dependency-groups]
+dev = ["pytest>=8.0"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["rag_core"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

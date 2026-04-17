@@ -1,0 +1,23 @@
+# Data (cached, large)
+data/pages/
+data/embeddings/
+results/
+
+# Secrets
+.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
