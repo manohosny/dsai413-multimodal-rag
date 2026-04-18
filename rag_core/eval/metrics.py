@@ -54,18 +54,25 @@ def per_content_type_metrics(
     ct_queries: dict[str, set[str]] = {}
 
     for row in qrels:
-        ct = row.get("content_type", "unknown")
+        raw_ct = row.get("content_type", "unknown")
         qid = str(row["query_id"])
         cid = str(row["corpus_id"])
         rel = int(row["score"])
 
-        if ct not in ct_qrels:
-            ct_qrels[ct] = {}
-            ct_queries[ct] = set()
-        if qid not in ct_qrels[ct]:
-            ct_qrels[ct][qid] = {}
-        ct_qrels[ct][qid][cid] = rel
-        ct_queries[ct].add(qid)
+        # content_type may be a list (e.g. ["table", "text"]) — expand to one entry per type
+        if isinstance(raw_ct, list):
+            types = raw_ct if raw_ct else ["unknown"]
+        else:
+            types = [raw_ct]
+
+        for ct in types:
+            if ct not in ct_qrels:
+                ct_qrels[ct] = {}
+                ct_queries[ct] = set()
+            if qid not in ct_qrels[ct]:
+                ct_qrels[ct][qid] = {}
+            ct_qrels[ct][qid][cid] = rel
+            ct_queries[ct].add(qid)
 
     # Compute metrics per content_type
     results: dict[str, dict[str, float]] = {}

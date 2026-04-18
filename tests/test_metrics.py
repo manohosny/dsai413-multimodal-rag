@@ -77,3 +77,17 @@ def test_per_content_type():
     assert "text" in result
     assert result["table"]["recall_1"] == 1.0
     assert result["text"]["recall_1"] == 1.0
+
+
+def test_per_content_type_list():
+    """content_type can be a list (e.g. from HuggingFace qrels)."""
+    run = {"q1": {"doc1": 0.9}}
+    qrels_raw = [
+        {"query_id": "q1", "corpus_id": "doc1", "score": 1, "content_type": ["table", "text"]},
+    ]
+
+    result = per_content_type_metrics(run, qrels_raw)
+    assert "table" in result
+    assert "text" in result
+    assert result["table"]["recall_1"] == 1.0
+    assert result["text"]["recall_1"] == 1.0

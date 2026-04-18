@@ -49,7 +49,7 @@ EMBEDDINGS_DIR.mkdir(parents=True, exist_ok=True)
 
 EMBEDDING_MODEL = "gemini-embedding-2-preview"
 EMBEDDING_DIM = 3072
-GENERATION_MODEL = "gemini-2.0-flash"
+GENERATION_MODEL = "gemini-3-flash-preview"
 
 # --- Pinecone ----------------------------------------------------------------
 

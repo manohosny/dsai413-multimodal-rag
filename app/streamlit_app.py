@@ -6,6 +6,8 @@ from pathlib import Path
 
 import streamlit as st
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 st.set_page_config(page_title="Multimodal RAG — Financial Docs", layout="wide")
 
 
@@ -27,7 +29,7 @@ system = st.sidebar.selectbox(
 
 st.sidebar.markdown("---")
 st.sidebar.markdown(
-    "**Architecture:** Gemini Embedding 2 → Pinecone → Gemini 2.0 Flash"
+    "**Architecture:** Gemini Embedding 2 → Pinecone → Gemini 3.0 Flash"
 )
 
 # --- Main ---
@@ -54,9 +56,12 @@ if st.button("Ask", type="primary") and query:
             img_path = None
             for r in result["retrieval_results"]:
                 if r.corpus_id == cid and r.image_path:
-                    img_path = Path(r.image_path)
+                    img_path = _PROJECT_ROOT / r.image_path
                     break
-            if img_path and img_path.exists():
+            # Fallback: construct path from corpus_id
+            if img_path is None or not img_path.exists():
+                img_path = _PROJECT_ROOT / "data" / "pages" / f"{cid:05d}.png"
+            if img_path.exists():
                 st.image(str(img_path), caption=f"Page {cid}", use_container_width=True)
             else:
                 st.info(f"Page {cid} (image not found)")

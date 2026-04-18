@@ -7,6 +7,7 @@ import time
 
 from google import genai
 
+from rag_core.api_retry import with_retry
 from rag_core.config import GEMINI_API_KEY, GENERATION_MODEL
 from rag_core.generation.prompts import JUDGE_PROMPT
 
@@ -30,9 +31,11 @@ class LLMJudge:
             question=query, ground_truth=ground_truth, answer=answer
         )
 
-        response = self._client.models.generate_content(
-            model=GENERATION_MODEL,
-            contents=[prompt],
+        response = with_retry(
+            lambda: self._client.models.generate_content(
+                model=GENERATION_MODEL,
+                contents=[prompt],
+            )
         )
 
         text = (response.text or "").strip()
@@ -46,7 +49,7 @@ class LLMJudge:
     def batch_judge(
         self,
         items: list[dict],
-        sleep_s: float = 0.5,
+        sleep_s: float = 1.0,
     ) -> float:
         """Score a batch of (query, answer, ground_truth) dicts.
 

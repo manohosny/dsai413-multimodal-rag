@@ -10,6 +10,7 @@ import numpy as np
 from google import genai
 from google.genai import types
 
+from rag_core.api_retry import with_retry
 from rag_core.config import (
     EMBEDDING_DIM,
     EMBEDDING_IMAGE_BATCH,
@@ -28,6 +29,10 @@ class GeminiEmbedder:
 
     def __init__(self) -> None:
         self._client = genai.Client(api_key=GEMINI_API_KEY)
+
+    def _embed_with_retry(self, **kwargs) -> object:
+        """Call embed_content with exponential backoff on transient errors."""
+        return with_retry(lambda: self._client.models.embed_content(**kwargs))
 
     # --- Cache ---------------------------------------------------------------
 
@@ -89,7 +94,7 @@ class GeminiEmbedder:
             contents = [
                 types.Content(parts=[types.Part(text=t)]) for t in batch_texts
             ]
-            response = self._client.models.embed_content(
+            response = self._embed_with_retry(
                 model=EMBEDDING_MODEL,
                 contents=contents,
                 config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
@@ -157,16 +162,40 @@ class GeminiEmbedder:
                 )
                 batch_ids.append(rid)
 
-            response = self._client.models.embed_content(
-                model=EMBEDDING_MODEL,
-                contents=contents,
-                config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
-            )
-
-            for rid, emb in zip(batch_ids, response.embeddings):
-                vec = np.array(emb.values, dtype=np.float32)
-                self._save_cache(rid, vec)
-                result[rid] = vec
+            try:
+                response = self._embed_with_retry(
+                    model=EMBEDDING_MODEL,
+                    contents=contents,
+                    config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),
+                )
+                for rid, emb in zip(batch_ids, response.embeddings):
+                    vec = np.array(emb.values, dtype=np.float32)
+                    self._save_cache(rid, vec)
+                    result[rid] = vec
+            except Exception as batch_exc:
+                if "INVALID" not in str(batch_exc) and "400" not in str(batch_exc):
+                    raise
+                # A bad image in the batch — fall back to one-by-one.
+                logger.warning(
+                    "Batch failed (%s), falling back to single-image embedding",
+                    type(batch_exc).__name__,
+                )
+                for content, rid in zip(contents, batch_ids):
+                    try:
+                        resp = self._embed_with_retry(
+                            model=EMBEDDING_MODEL,
+                            contents=[content],
+                            config=types.EmbedContentConfig(
+                                output_dimensionality=EMBEDDING_DIM
+                            ),
+                        )
+                        vec = np.array(resp.embeddings[0].values, dtype=np.float32)
+                        self._save_cache(rid, vec)
+                        result[rid] = vec
+                    except Exception as img_exc:
+                        logger.warning(
+                            "Skipping invalid image %s: %s", rid, img_exc
+                        )
 
             logger.debug(
                 "Image batch %d-%d done",
@@ -183,7 +212,7 @@ class GeminiEmbedder:
 
     def embed_query(self, query: str) -> np.ndarray:
         """Embed a single query string. No caching (queries are ephemeral)."""
-        response = self._client.models.embed_content(
+        response = self._embed_with_retry(
             model=EMBEDDING_MODEL,
             contents=[query],
             config=types.EmbedContentConfig(output_dimensionality=EMBEDDING_DIM),

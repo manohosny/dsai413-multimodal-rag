@@ -6,6 +6,7 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from rag_core.config import PAGES_DIR
 from rag_core.embeddings.gemini_embedder import GeminiEmbedder
 from rag_core.generation.gemini import GeminiGenerator
 from rag_core.retrieval.pinecone_store import PineconeStore
@@ -46,11 +47,22 @@ class RAGPipeline:
         for r in results:
             if r.record_type == "page_image" and r.image_path:
                 if r.image_path not in seen_images:
-                    page_images.append(Path(r.image_path))
+                    # Construct absolute path from corpus_id for reliability
+                    img = PAGES_DIR / f"{r.corpus_id:05d}.png"
+                    if img.exists():
+                        page_images.append(img)
                     seen_images.add(r.image_path)
             elif r.record_type == "text_chunk" and r.chunk_text:
                 label = f"[{r.modality}]" if r.modality else ""
                 text_chunks.append(f"{label} {r.chunk_text}")
+
+        # If no images were retrieved (e.g. text_only mode), still send page images
+        # for the top pages so the VLM can use visual context for generation.
+        if not page_images:
+            for cid in page_ids:
+                img = PAGES_DIR / f"{cid:05d}.png"
+                if img.exists():
+                    page_images.append(img)
 
         # Generate answer
         gen_result = self._generator.generate(query, page_images, text_chunks)

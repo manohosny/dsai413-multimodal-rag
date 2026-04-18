@@ -1,4 +1,4 @@
-"""Gemini 2.0 Flash generation: accept page images + text chunks, produce an answer."""
+"""Gemini 3.0 Flash generation: accept page images + text chunks, produce an answer."""
 
 from __future__ import annotations
 
@@ -9,6 +9,7 @@ from pathlib import Path
 from google import genai
 from google.genai import types
 
+from rag_core.api_retry import with_retry
 from rag_core.config import GEMINI_API_KEY, GENERATION_MODEL
 from rag_core.generation.prompts import QA_PROMPT
 from rag_core.models import GenerationResult
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 class GeminiGenerator:
-    """Generate answers using Gemini 2.0 Flash with page images and text context."""
+    """Generate answers using Gemini 3.0 Flash with page images and text context."""
 
     def __init__(self) -> None:
         self._client = genai.Client(api_key=GEMINI_API_KEY)
@@ -54,9 +55,11 @@ class GeminiGenerator:
         contents.append(prompt_text)
 
         # Call Gemini Flash
-        response = self._client.models.generate_content(
-            model=GENERATION_MODEL,
-            contents=contents,
+        response = with_retry(
+            lambda: self._client.models.generate_content(
+                model=GENERATION_MODEL,
+                contents=contents,
+            )
         )
 
         answer_text = response.text or ""
