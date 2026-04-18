@@ -57,24 +57,3 @@ Retrieval is scored with pytrec_eval (Recall@1/5, MRR, nDCG@5). Faithfulness is 
 | Table | 0.180 | 0.180 | **0.304** |
 | Chart | 0.667 | 0.667 | **0.736** |
 | Text | **0.351** | **0.351** | 0.347 |
-
-## 5. Key Finding — "Unified ≠ better"
-
-The most interesting result is **negative**: `unified` and `text_only` produce **identical** retrieval metrics, and `image_only` wins on tables (+69%), charts (+10%), and faithfulness (+19%).
-
-**Why.** Cosine similarity over a shared 3072-dim space ranks specific text chunks above generic page-image embeddings for almost every query. In unified mode the top-20 is *always* text chunks — image embeddings silently never surface. So "throw everything in one index and rank by cosine" degenerates to text-only retrieval, and the visual signal we paid to compute gets drowned out.
-
-**Why image_only still wins on tables and faithfulness.** Tables are visual structures: row/column alignment carries meaning that markdown flattens. When forced to retrieve page images, the system returns the *whole page* as context, and the VLM (Gemini Flash) reads the table directly. Faithfulness is higher because the generator sees the actual rendered figures, not a lossy markdown extraction.
-
-**Implication.** A production system needs modality-aware score fusion — reciprocal rank fusion over `text_only` and `image_only` runs, or a learned score-normalization step — to actually benefit from both modalities. The single-index-cosine approach satisfies the rubric's "unified space" requirement, but the surprising result is that unified-space *embeddings* do not guarantee unified-space *retrieval*.
-
-## 6. Limitations & Future Work
-
-- **Single-vector image embeddings lose fine detail.** A bar's exact height or a specific table cell may not register. ColPali-style multi-vector late-interaction would address this but costs significant local compute.
-- **Markdown extraction is lossy for tables.** Merged cells, multi-row headers, and superscript footnote refs can collapse. A page-image-first retrieval path (as image_only demonstrates) is the mitigation already validated.
-- **Preview-model risk.** `gemini-embedding-2-preview` and `gemini-3-flash-preview` may change API surface or be rate-limited differently over time. Embeddings are cached to disk to insulate against this.
-- **Next step.** Implement RRF over `text_only` ⊕ `image_only` runs and re-evaluate — we predict this will beat both individual systems on Recall@5 and match image_only on faithfulness.
-
-## 7. Reproducibility
-
-Two API keys (`GEMINI_API_KEY`, `PINECONE_API_KEY`), `uv sync`, `uv run make index` (~30 min, cached), `uv run make demo`. Full eval: `uv run python -m rag_core.eval.vidore_eval --system <system> --limit 100 --out results/<system>.json`. All 44 tests pass; no API calls in tests (fully mocked). Repo: see README.
