@@ -93,7 +93,7 @@ One Pinecone index: `multimodal-rag`
 
 At query time, one search returns both relevant page images AND text chunks. Group by `corpus_id` → top-k pages → VLM generator.
 
-### ADR-04: Gemini 2.0 Flash for generation
+### ADR-04: Gemini 3.0 Flash for generation
 
 Same vendor. Accepts images natively. Free tier.
 
@@ -133,7 +133,7 @@ flowchart TB
         QEMB -->|cosine top-k| IDX
         IDX -->|page images + text chunks| MERGE[Group by page<br/>combine scores]
         MERGE --> TOPK[Top-3 pages]
-        TOPK --> VLM[Gemini 2.0 Flash<br/>+ page images + matched chunks]
+        TOPK --> VLM[Gemini 3.0 Flash<br/>+ page images + matched chunks]
         VLM --> ANS[Answer + citations]
         ANS --> UI[Streamlit UI]
     end
@@ -321,7 +321,7 @@ index.upsert(vectors=[
 
 ### 5.2 Generation
 
-Send top-3 page images + matched text chunks to Gemini 2.0 Flash:
+Send top-3 page images + matched text chunks to Gemini 3.0 Flash:
 
 ```
 You are answering a question about financial document pages.
@@ -397,7 +397,7 @@ dsai413-multimodal-rag/
 │   │   └── retriever.py         # search + group by page + rank
 │   ├── generation/
 │   │   ├── base.py              # abstract Generator ABC
-│   │   ├── gemini.py            # Gemini 2.0 Flash
+│   │   ├── gemini.py            # Gemini 3.0 Flash
 │   │   └── prompts.py           # generation + citation prompts
 │   ├── pipeline/
 │   │   └── router.py            # end-to-end orchestration

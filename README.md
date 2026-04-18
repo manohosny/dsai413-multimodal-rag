@@ -1,7 +1,7 @@
 # Multi-Modal Document QA (RAG)
 
 Unified multimodal RAG system for financial document question answering.
-Embeds both page images and parsed text chunks into a single vector space using **Gemini Embedding 2**, stores them in **Pinecone serverless**, and generates answers with **Gemini 2.0 Flash**.
+Embeds both page images and parsed text chunks into a single vector space using **Gemini Embedding 2**, stores them in **Pinecone serverless**, and generates answers with **Gemini 3.0 Flash**.
 
 **Dataset:** [vidore/vidore_v3_finance_en](https://huggingface.co/datasets/vidore/vidore_v3_finance_en) — 2,942 pages, 309 queries, 8,766 qrels.
 
@@ -22,7 +22,7 @@ HuggingFace Dataset
     ↓
 [retriever] → embed query → search → group by page → top-3
     ↓
-[gemini_generator] → Gemini 2.0 Flash → answer + citations
+[gemini_generator] → Gemini 3.0 Flash → answer + citations
 ```
 
 ## Quick Start
@@ -53,7 +53,19 @@ uv run make eval SYSTEM=image_only
 |--------|----------------|---------------|
 | **text_only** | `record_type = text_chunk` | Text retrieval only |
 | **image_only** | `record_type = page_image` | Visual retrieval only |
-| **unified** | No filter | Full system (expected winner) |
+| **unified** | No filter | Full system (all records) |
+
+## Evaluation Results (100 queries)
+
+| Metric | unified | text_only | image_only |
+|--------|---------|-----------|-----------|
+| Recall@1 | 0.208 | 0.208 | 0.189 |
+| Recall@5 | 0.304 | 0.304 | **0.338** |
+| MRR | 0.563 | 0.563 | 0.563 |
+| nDCG@5 | 0.385 | 0.385 | 0.385 |
+| Faithfulness | 0.575 | 0.593 | **0.688** |
+
+**Key finding:** `unified` and `text_only` produce identical retrieval metrics — cosine ranking over the shared space consistently puts text chunks above page images, so the "unified" top-20 is always text-only. `image_only` wins on tables (+69% Recall@5) and faithfulness (+19%). Full analysis in [report/technical_report.md](report/technical_report.md).
 
 ## Commands
 
@@ -67,7 +79,7 @@ uv run make eval SYSTEM=image_only
 
 ## Dependencies
 
-- `google-genai` — Gemini Embedding 2 + Gemini 2.0 Flash
+- `google-genai` — Gemini Embedding 2 + Gemini 3.0 Flash
 - `pinecone` — Pinecone serverless
 - `datasets` — HuggingFace
 - `pillow` — Image handling

@@ -3,7 +3,7 @@
 Unified multimodal RAG over financial document pages.
 - Embedding: Gemini Embedding 2 (text + images → 3072-dim unified space, via API)
 - Vector store: Pinecone serverless (single index, cosine)
-- Generation: Gemini 2.0 Flash (via API)
+- Generation: Gemini 3.0 Flash (via API)
 - Dataset: vidore/vidore_v3_finance_en (HuggingFace)
 
 Full architecture in @docs/DESIGN.md — read before planning changes.
